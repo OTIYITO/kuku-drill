@@ -134,6 +134,29 @@ h1 {
     background: #4f7cff;
     color: #fff;
 }
+.dan-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 9px;
+}
+.dan-action-button {
+    padding: 6px 12px;
+    border: 1px solid #c8ceda;
+    border-radius: 9px;
+    background: #fff;
+    color: #4b5563;
+    font-size: clamp(12px, 2.1dvh, 14px);
+    font-weight: 700;
+}
+.dan-action-button:active {
+    transform: scale(.97);
+}
+.dan-help {
+    margin-top: 7px;
+    color: #7a8494;
+    font-size: clamp(11px, 1.9dvh, 13px);
+}
 .setting-row {
     margin-top: clamp(12px, 2.4dvh, 20px);
     font-size: clamp(16px, 2.7dvh, 19px);
@@ -369,8 +392,8 @@ select {
                 <span class="example">3×1，3×2，3×3…</span>
             </button>
             <button type="button" class="mode-button" id="modeRandom" onclick="selectMode('random')">
-                <span class="mode-number">②</span>全段ランダム
-                <span class="example">1〜9の段をランダム</span>
+                <span class="mode-number">②</span>ランダム九九
+                <span class="example">選んだ段からランダム</span>
             </button>
             <button type="button" class="mode-button" id="modeHole" onclick="selectMode('hole')">
                 <span class="mode-number">③</span>穴あき九九
@@ -382,21 +405,26 @@ select {
             </button>
         </div>
 
-        <div id="modeDescription" class="mode-description">選んだ段を1から9まで順番に練習します。</div>
+        <div id="modeDescription" class="mode-description">選んだ段を，1から9まで順番に練習します。</div>
 
         <div id="danSetting" class="dan-setting">
-            <div class="dan-setting-title">どの段をやる？</div>
+            <div class="dan-setting-title">練習する段を選ぶ（複数OK）</div>
             <div class="dan-buttons" id="danButtons">
-                <button type="button" class="dan-button" data-dan="1" onclick="selectDan(1)">1</button>
-                <button type="button" class="dan-button selected" data-dan="2" onclick="selectDan(2)">2</button>
-                <button type="button" class="dan-button" data-dan="3" onclick="selectDan(3)">3</button>
-                <button type="button" class="dan-button" data-dan="4" onclick="selectDan(4)">4</button>
-                <button type="button" class="dan-button" data-dan="5" onclick="selectDan(5)">5</button>
-                <button type="button" class="dan-button" data-dan="6" onclick="selectDan(6)">6</button>
-                <button type="button" class="dan-button" data-dan="7" onclick="selectDan(7)">7</button>
-                <button type="button" class="dan-button" data-dan="8" onclick="selectDan(8)">8</button>
-                <button type="button" class="dan-button" data-dan="9" onclick="selectDan(9)">9</button>
+                <button type="button" class="dan-button" data-dan="1" aria-pressed="false" onclick="toggleDan(1)">1</button>
+                <button type="button" class="dan-button selected" data-dan="2" aria-pressed="true" onclick="toggleDan(2)">2</button>
+                <button type="button" class="dan-button" data-dan="3" aria-pressed="false" onclick="toggleDan(3)">3</button>
+                <button type="button" class="dan-button" data-dan="4" aria-pressed="false" onclick="toggleDan(4)">4</button>
+                <button type="button" class="dan-button" data-dan="5" aria-pressed="false" onclick="toggleDan(5)">5</button>
+                <button type="button" class="dan-button" data-dan="6" aria-pressed="false" onclick="toggleDan(6)">6</button>
+                <button type="button" class="dan-button" data-dan="7" aria-pressed="false" onclick="toggleDan(7)">7</button>
+                <button type="button" class="dan-button" data-dan="8" aria-pressed="false" onclick="toggleDan(8)">8</button>
+                <button type="button" class="dan-button" data-dan="9" aria-pressed="false" onclick="toggleDan(9)">9</button>
             </div>
+            <div class="dan-actions">
+                <button type="button" class="dan-action-button" onclick="selectAllDans()">全部選ぶ</button>
+                <button type="button" class="dan-action-button" onclick="clearDans()">全部はずす</button>
+            </div>
+            <div class="dan-help">青くなっている段から出題します。</div>
         </div>
 
         <div class="setting-row">
@@ -465,7 +493,7 @@ select {
 "use strict";
 
 let selectedMode = "basic";
-let selectedDan = 2;
+let selectedDans = [2];
 let totalQuestions = 9;
 let currentQuestion = 0;
 let correctCount = 0;
@@ -478,15 +506,15 @@ let endTime = 0;
 let showTime = false;
 
 const modeDescriptions = {
-    basic: "選んだ段を1から9まで順番に練習します。",
-    random: "1〜9の段から，できるだけ同じ問題が重ならないようにランダム出題します。",
-    hole: "答えを見て，□に入る数を考えます。□の位置は左右ランダムです。",
-    mix: "ふつうの九九と穴あき九九をランダムに混ぜて出題します。"
+    basic: "選んだ段を，1から9まで順番に練習します。複数の段を選ぶと，それぞれをバランスよく出題します。",
+    random: "選んだ段から，できるだけ同じ問題が重ならないようにランダム出題します。",
+    hole: "選んだ段の九九から，答えを見て□に入る数を考えます。□の位置は左右ランダムです。",
+    mix: "選んだ段のふつうの九九と穴あき九九をランダムに混ぜて出題します。"
 };
 
 const modeNames = {
     basic: "段ごとの基本九九",
-    random: "全段ランダム",
+    random: "ランダム九九",
     hole: "穴あき九九",
     mix: "ミックス"
 };
@@ -497,17 +525,39 @@ function selectMode(mode) {
     const map = { basic: "modeBasic", random: "modeRandom", hole: "modeHole", mix: "modeMix" };
     document.getElementById(map[mode]).classList.add("selected");
     document.getElementById("modeDescription").textContent = modeDescriptions[mode];
-    document.getElementById("danSetting").classList.toggle("hidden", mode !== "basic");
-
-    // 基本九九に戻ったときは，1段を一巡しやすい9問を既定にする。
-    // 他モードでは現在の選択をそのまま維持する。
 }
 
-function selectDan(dan) {
-    selectedDan = dan;
-    document.querySelectorAll(".dan-button").forEach(btn => btn.classList.remove("selected"));
-    const button = document.querySelector(`.dan-button[data-dan="${dan}"]`);
-    if (button) button.classList.add("selected");
+function refreshDanButtons() {
+    document.querySelectorAll(".dan-button").forEach(btn => {
+        const dan = Number(btn.dataset.dan);
+        const isSelected = selectedDans.includes(dan);
+        btn.classList.toggle("selected", isSelected);
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    });
+}
+
+function toggleDan(dan) {
+    if (selectedDans.includes(dan)) {
+        selectedDans = selectedDans.filter(value => value !== dan);
+    } else {
+        selectedDans = [...selectedDans, dan].sort((a, b) => a - b);
+    }
+    refreshDanButtons();
+}
+
+function selectAllDans() {
+    selectedDans = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    refreshDanButtons();
+}
+
+function clearDans() {
+    selectedDans = [];
+    refreshDanButtons();
+}
+
+function selectedDanLabel() {
+    if (selectedDans.length === 9) return "1〜9の段";
+    return selectedDans.join("・") + "の段";
 }
 
 function shuffle(array) {
@@ -521,11 +571,11 @@ function shuffle(array) {
 
 function allFacts() {
     const facts = [];
-    for (let a = 1; a <= 9; a++) {
+    selectedDans.forEach(a => {
         for (let b = 1; b <= 9; b++) {
             facts.push({ a, b });
         }
-    }
+    });
     return facts;
 }
 
@@ -533,15 +583,21 @@ function buildQuestions(mode, count) {
     const result = [];
 
     if (mode === "basic") {
+        // 複数の段を選んだ場合も偏らないよう，
+        // かける数ごとに選択した段を順番に回す。
+        const basicPool = [];
+        for (let b = 1; b <= 9; b++) {
+            selectedDans.forEach(a => basicPool.push({ a, b }));
+        }
         for (let i = 0; i < count; i++) {
-            const b = (i % 9) + 1;
-            result.push({ type: "normal", a: selectedDan, b, answer: selectedDan * b });
+            const fact = basicPool[i % basicPool.length];
+            result.push({ type: "normal", a: fact.a, b: fact.b, answer: fact.a * fact.b });
         }
         return result;
     }
 
-    // 81問までは全九九をシャッフルしたものから重複なしで取得する。
-    // 将来81問を超える設定を加えても動くよう，必要なら新しい山を継ぎ足す。
+    // 選んだ段の九九をシャッフルし，可能な範囲で重複なしで出題する。
+    // 問題数が組み合わせ数を超える場合は，新しい山を継ぎ足す。
     let pool = [];
     while (pool.length < count) {
         pool = pool.concat(shuffle(allFacts()));
@@ -579,6 +635,11 @@ function buildQuestions(mode, count) {
 }
 
 function startGame() {
+    if (selectedDans.length === 0) {
+        window.alert("練習する段を1つ以上選んでください。");
+        return;
+    }
+
     totalQuestions = Number(document.getElementById("questionCount").value);
     showTime = document.getElementById("showTimeOption").checked;
     currentQuestion = 0;
@@ -601,9 +662,7 @@ function showQuestion() {
     answered = false;
 
     document.getElementById("progress").textContent = `${currentQuestion + 1} / ${totalQuestions} 問`;
-    document.getElementById("modeLabel").textContent = selectedMode === "basic"
-        ? `${selectedDan}の段`
-        : modeNames[selectedMode];
+    document.getElementById("modeLabel").textContent = `${selectedDanLabel()} ／ ${modeNames[selectedMode]}`;
 
     document.getElementById("message").textContent = "";
     document.getElementById("message").className = "message";
